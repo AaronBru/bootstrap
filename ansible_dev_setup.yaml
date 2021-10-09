@@ -1,0 +1,78 @@
+---
+- name: Bootstrapping
+  hosts: localhost
+  gather_facts: yes
+  become: no
+  vars:
+        vim_dir: "{{ ansible_env.HOME }}/.vim"
+        vimrc: "{{ ansible_env.HOME }}/.vimrc"
+        dotfiles_dir: "{{ ansible_env.HOME }}/.dotfiles"
+        fzf_dir: "{{ ansible_env.HOME }}/.fzf"
+
+  tasks:
+  - name: Install required packages
+    package:
+      name:
+        - vim
+        - git
+        - curl
+    become: yes
+    tags:
+       - install_packages
+
+  - name: Ensure .vim/{bundle} directory exists
+    file:
+      path: "{{ item }}"
+      state: directory
+      recurse: no
+      mode: 0750
+
+    loop:
+     - " {{ vim_dir }}"
+     - " {{ vim_dir }}/bundle"
+
+  - name: Clone repos
+    git:
+      dest: "{{ item.dest }}"
+      repo: "{{ item.url }}"
+      clone: yes
+      update: yes
+      recursive: no
+      bare: "{{ item.bare }}"
+    loop:
+    - name: Vundle.vim
+      dest: "{{ vim_dir }}/bundle/Vundle.vim"
+      url: https://github.com/VundleVim/Vundle.vim.git
+      bare: no
+    - name: Dotfiles
+      dest: "{{ dotfiles_dir }}"
+      url: https://github.com/AaronBru/dotfiles.git
+      bare: yes
+    - name: fzf
+      dest: "{{ fzf_dir }}"
+      url: https://github.com/junegunn/fzf
+      bare: no
+
+  - name: Download git contribution scripts
+    get_url:
+      url: "{{ item.url }}"
+      dest: "{{ item.dest }}"
+    loop:
+      - name: Git bash completion
+        url: https://raw.githubusercontent.com/git/git/master/contrib/completion/git-completion.bash
+        dest: "{{ ansible_env.HOME }}/.git-completion.bash"
+      - name: Git bash prompt formatting
+        url: https://raw.githubusercontent.com/git/git/master/contrib/completion/git-prompt.sh
+        dest: "{{ ansible_env.HOME }}/.git-prompt.sh"
+
+  - name : Final setup
+    shell: "{{ item.cmd }}"
+
+    loop:
+    - name: Sync dotfiles
+      cmd: "/usr/bin/git --git-dir={{ dotfiles_dir }} --work-tree={{ ansible_env.HOME }} checkout -f"
+    - name: Setup fzf
+      cmd: "{{ fzf_dir }}/install --all"
+    - name: Automate plugin install
+      cmd: "vim +PluginInstall +qa"
+
