@@ -8,6 +8,7 @@
         vimrc: "{{ ansible_env.HOME }}/.vimrc"
         dotfiles_dir: "{{ ansible_env.HOME }}/.dotfiles"
         fzf_dir: "{{ ansible_env.HOME }}/.fzf"
+        doom_dir: "{{ ansible_env.HOME }}/.config/emacs"
 
   tasks:
   - name: Install required packages
@@ -16,6 +17,10 @@
         - vim
         - git
         - curl
+        - cmake
+        - libtool
+        - libtool-bin
+        - ripgrep
     become: yes
     tags:
        - install_packages
@@ -52,6 +57,10 @@
       dest: "{{ fzf_dir }}"
       url: https://github.com/junegunn/fzf
       bare: no
+    - name: doom
+      dest: "{{ doom_dir }}"
+      url: https://github.com/doomemacs/doomemacs
+      bare: no
 
   - name: Download git contribution scripts
     get_url:
@@ -75,4 +84,7 @@
       cmd: "{{ fzf_dir }}/install --all"
     - name: Automate plugin install
       cmd: "vim +PluginInstall +qa"
+    - name: Setup doom
+      cmd: "{{ doom_dir }}/bin/doom install --force --no-env"
+
 
